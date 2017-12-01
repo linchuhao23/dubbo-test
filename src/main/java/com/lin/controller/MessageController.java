@@ -52,5 +52,10 @@ public class MessageController {
 	public String hello() {
 		return "hello";
 	}
+	
+	@RequestMapping(value = {"/", "/login"})
+	public String login() {
+		return "login";
+	}
 
 }
