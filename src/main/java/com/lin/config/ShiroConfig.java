@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.Filter;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.apache.shiro.SecurityUtils;
@@ -45,13 +48,19 @@ import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSource
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.Subject;
-import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
-import org.apache.shiro.web.filter.authc.LogoutFilter;
+import org.apache.shiro.util.ThreadContext;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
+import org.apache.shiro.web.util.WebUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.AnnotationUtils;
 
 @Configuration
@@ -125,6 +134,7 @@ public class ShiroConfig {
 	 *
 	 */
 	@Bean
+	@Primary
 	public ShiroFilterFactoryBean shirFilter(org.apache.shiro.mgt.SecurityManager securityManager) {
 		ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
 
@@ -132,9 +142,9 @@ public class ShiroConfig {
 		shiroFilterFactoryBean.setSecurityManager(securityManager);
 
 		// 如果不设置默认会自动寻找Web工程根目录下的"/login.jsp"页面
-		shiroFilterFactoryBean.setLoginUrl("/test/login");
+		shiroFilterFactoryBean.setLoginUrl("/login");
 		// 登录成功后要跳转的链接
-		shiroFilterFactoryBean.setSuccessUrl("/test/");
+		shiroFilterFactoryBean.setSuccessUrl("/");
 		// 未授权界面;
 		// shiroFilterFactoryBean.setUnauthorizedUrl("/403");
 
@@ -143,27 +153,27 @@ public class ShiroConfig {
 
 		// 配置不会被拦截的链接 顺序判断
 		// 登录验证
-		filterChainDefinitionMap.put("/test/login", "authc");
+		filterChainDefinitionMap.put("/login", "authc");
 
 		// 配置退出过滤器,其中的具体的退出代码Shiro已经替我们实现了
-		filterChainDefinitionMap.put("/test/logout", "logout");
+		filterChainDefinitionMap.put("/logout", "logout");
 
 		// 静态资源
-		filterChainDefinitionMap.put("/test/static/**", "anon");
+		filterChainDefinitionMap.put("/static/**", "anon");
 
 		// 后台管理
 		// filterChainDefinitionMap.put("/admin", "roles[admin]");
 
 		//
-		filterChainDefinitionMap.put("/test/**", "user");
+		filterChainDefinitionMap.put("/**", "user");
 
 		shiroFilterFactoryBean.setFilterChainDefinitionMap(filterChainDefinitionMap);
 
 		Map<String, Filter> filters = new HashMap<String, Filter>();
 
-		filters.put("authc", new FormAuthenticationFilter());
+		filters.put("authc", new MyFormAuthenticationFilter());
 
-		filters.put("logout", new LogoutFilter());
+		filters.put("logout", new MyLogoutFilter());
 
 		shiroFilterFactoryBean.setFilters(filters);
 
@@ -370,6 +380,64 @@ public class ShiroConfig {
 			setCredentialsMatcher(matcher);
 		}*/
 
+	}
+	
+	public class MyFormAuthenticationFilter extends org.apache.shiro.web.filter.authc.FormAuthenticationFilter implements ApplicationContextAware {
+		protected Logger logger = LoggerFactory.getLogger(this.getClass());
+		
+		ApplicationContext ac;
+		/**
+		 * 。
+		 * @param token
+		 * @param subject
+		 * @param request
+		 * @param response
+		 * @return
+		 * @throws Exception  
+		 * @see org.apache.shiro.web.filter.authc.FormAuthenticationFilter#onLoginSuccess(org.apache.shiro.authc.AuthenticationToken, org.apache.shiro.subject.Subject, javax.servlet.ServletRequest, javax.servlet.ServletResponse)
+		 */
+		@Override
+	    protected boolean onLoginSuccess(AuthenticationToken token, Subject subject,
+	            ServletRequest request, ServletResponse response) throws Exception {
+			WebUtils.issueRedirect(request, response, "/", null, true);
+	    	HttpServletRequest _request = (HttpServletRequest)request;
+	    	_request.getSession().setAttribute(ThreadContext.SUBJECT_KEY, subject);
+	    	_request.getSession().setAttribute("user", subject.getPrincipal());
+			postSuccess();
+			return false;
+		}
+		
+		protected void postSuccess() {
+			
+		}
+
+		@Override
+	    protected boolean onLoginFailure(AuthenticationToken token, AuthenticationException e,
+	            ServletRequest request, ServletResponse response) {
+			request.setAttribute("username", request.getParameter("username"));
+			request.setAttribute("password", request.getParameter("password"));
+			setFailureAttribute(request, e);
+			return true;
+		}
+
+		@Override
+		public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+			ac = applicationContext;
+		}
+	}
+	
+	public class MyLogoutFilter extends org.apache.shiro.web.filter.authc.LogoutFilter implements ApplicationContextAware {
+		ApplicationContext ac;
+		
+		@Override
+		protected boolean preHandle(ServletRequest request, ServletResponse response) throws Exception {
+			return super.preHandle(request, response);
+		}
+		
+		@Override
+		public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+			ac = applicationContext;
+		}
 	}
 	/**************************************************************************************/
 
