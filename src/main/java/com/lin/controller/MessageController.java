@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.lin.dao.UserDao;
+import com.lin.dubbo.DubboServiceRef;
 import com.lin.entity.User;
 import com.lin.service.MessageService;
 
@@ -56,6 +57,15 @@ public class MessageController {
 	@RequestMapping(value = {"/", "/login"})
 	public String login() {
 		return "login";
+	}
+	
+	@Autowired
+	private DubboServiceRef dubboServiceRef;
+	
+	@RequestMapping(value = {base_url + "/dubbo-service-name"})
+	@ResponseBody
+	public String getDubboServiceName() {
+		return dubboServiceRef.getDubboServiceName();
 	}
 
 }
