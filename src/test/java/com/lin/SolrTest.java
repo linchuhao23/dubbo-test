@@ -13,6 +13,11 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClient.Builder;
+import org.apache.solr.client.solrj.response.FacetField;
+import org.apache.solr.client.solrj.response.FacetField.Count;
+import org.apache.solr.client.solrj.response.Group;
+import org.apache.solr.client.solrj.response.GroupCommand;
+import org.apache.solr.common.params.GroupParams;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +29,7 @@ public class SolrTest {
 	@Before
 	public void before() {
 		try {
-			HttpSolrClient httpSolrClient = new Builder("http://127.0.0.1:8080/solr/core1").build();
+			HttpSolrClient httpSolrClient = new Builder("http://192.168.1.102:8984/solr").build();
 			httpSolrClient.setConnectionTimeout(30000);
 			httpSolrClient.setDefaultMaxConnectionsPerHost(100);
 			httpSolrClient.setMaxTotalConnections(100);
@@ -45,7 +50,7 @@ public class SolrTest {
 		}
 	}
 
-	@Test
+	// @Test
 	public void add() {
 		List<Doc> docs = new ArrayList<>();
 		for (int i = 0; i < 10; ++i) {
@@ -68,7 +73,7 @@ public class SolrTest {
 		}
 	}
 
-	@Test
+	// @Test
 	public void query() throws SolrServerException, IOException {
 		SolrQuery params = new SolrQuery("*:*");
 		List<Doc> docs = solrClient.query(params).getBeans(Doc.class);
@@ -76,8 +81,8 @@ public class SolrTest {
 			docs.forEach(System.out::println);
 		}
 	}
-	
-	@Test
+
+	// @Test
 	public void update() throws SolrServerException, IOException {
 		SolrQuery params = new SolrQuery("*:*");
 		List<Doc> docs = solrClient.query(params).getBeans(Doc.class);
@@ -90,10 +95,52 @@ public class SolrTest {
 		}
 	}
 
-	@Test
+	// @Test
 	public void deleteAll() throws SolrServerException, IOException {
 		// this.solrClient.deleteByQuery("*:*");
 		// this.solrClient.commit();
+	}
+
+	@Test
+	public void facetCount() throws SolrServerException, IOException {
+		SolrQuery solrQuery = new SolrQuery("*:*");
+		solrQuery.setFacet(true);
+		solrQuery.setRows(0);
+		solrQuery.addFacetField("eventTag", "status", "tradeTag", "valueIndex");
+		List<FacetField> facetFields = solrClient.query(solrQuery).getFacetFields();
+		for (FacetField f : facetFields) {
+			List<Count> values = f.getValues();
+			System.out.println("-------------------------------------");
+			System.out.println(f.getName() + ", " + f.getValueCount());
+			for (Count c : values) {
+				System.out.println(c.getName() + ", " + c.getCount());
+			}
+			System.out.println("--------------------------------------");
+		}
+	}
+
+	@Test
+	public void groupCount() throws SolrServerException, IOException {
+		SolrQuery solrQuery = new SolrQuery("*:*");
+		solrQuery.setParam(GroupParams.GROUP, true);
+		solrQuery.setParam(GroupParams.GROUP_FIELD, "valueIndex", "status");
+		solrQuery.setParam(GroupParams.GROUP_FACET, true);
+		solrQuery.setParam(GroupParams.GROUP_TOTAL_COUNT, true);
+		//solrQuery.setParam(GroupParams.GROUP_QUERY, "valueIndex:3");
+		// 设置每个quality对应的
+		solrQuery.setParam(GroupParams.GROUP_LIMIT, "1");
+		solrQuery.setParam(GroupParams.GROUP_FUNC, "exists(expertComments)", "exists(eventTag)");
+		// 设置返回doc文档数据，因只需要数量，故设置为0
+		//solrQuery.setRows(10);
+		List<GroupCommand> values = solrClient.query(solrQuery).getGroupResponse().getValues();
+		for (GroupCommand g : values) {
+			System.out.println("----------------------------------------");
+			System.out.println(g.getName() + "," + g.getMatches() + ", " + g.getNGroups() + ", " + g.getValues().size());
+			for (Group e : g.getValues()) {
+				System.out.println(e.getGroupValue() + ", " + e.getResult().getNumFound());
+			}
+			System.out.println("----------------------------------------");
+		}
 	}
 
 	public static String generateChinese(int len) {
@@ -113,7 +160,7 @@ public class SolrTest {
 				builder.append(new String(b, "GBK"));
 			}
 		} catch (Exception e) {
-			
+
 		}
 		return builder.toString();
 	}

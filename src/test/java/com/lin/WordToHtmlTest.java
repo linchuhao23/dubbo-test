@@ -54,7 +54,15 @@ public class WordToHtmlTest {
 
 				// 2) 解析 XHTML配置 (这里设置IURIResolver来设置图片存放的目录)
 				File imageFolderFile = new File(filepath);
-				XHTMLOptions options = XHTMLOptions.create().URIResolver(new FileURIResolver(imageFolderFile));
+				//XHTMLOptions options = XHTMLOptions.create().URIResolver(new FileURIResolver(imageFolderFile));
+				XHTMLOptions options = XHTMLOptions.create().URIResolver(new FileURIResolver(imageFolderFile) {
+					@Override
+					public String resolve(String uri) {
+						String resolve = super.resolve(uri);
+						System.out.println("uri -> " + uri + ", resolve -> " + resolve);
+						return resolve;
+					}
+				});
 				options.setExtractor(new FileImageExtractor(imageFolderFile));
 				options.setIgnoreStylesIfUnused(false);
 				options.setFragment(true);

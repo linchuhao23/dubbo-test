@@ -211,6 +211,28 @@
             <version>3.14</version>
         </dependency>
         
+        <dependency>
+	        <groupId>THUCTC_java_v1</groupId>
+			<artifactId>THUCTC_java_v1</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+	        <scope>system</scope>
+	        <systemPath>${basedir}/lib/THULAC_java_v1.jar</systemPath>
+	    </dependency>	
+	    <dependency>
+	        <groupId>libsvm</groupId> 
+	        <artifactId>libsvm</artifactId>  
+	        <version>1.0</version> 
+	        <scope>system</scope>  
+	        <systemPath>${basedir}/lib/libsvm.jar</systemPath>
+	    </dependency>	
+	    <dependency>
+	        <groupId>liblinear</groupId> 
+	        <artifactId>liblinear</artifactId>  
+	        <version>1.0</version>
+	        <scope>system</scope>
+	        <systemPath>${basedir}/lib/liblinear-1.8.jar</systemPath>
+	    </dependency>
+        
 	</dependencies>
 
 </project>
